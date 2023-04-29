@@ -143,6 +143,11 @@ class CCXTProStore(with_metaclass(MetaSingleton, object)):
     async def fetch_ohlcv(self, symbol, timeframe, since, limit, params={}):
         if self.debug:
             print('Fetching: {}, TF: {}, Since: {}, Limit: {}'.format(symbol, timeframe, since, limit))
+        return await self.exchange.fetch_ohlcv(symbol, timeframe=timeframe, since=since, limit=limit, params=params)
+
+    async def watch_ohlcv(self, symbol, timeframe, since, limit, params={}):
+        if self.debug:
+            print('Fetching: {}, TF: {}, Since: {}, Limit: {}'.format(symbol, timeframe, since, limit))
         return await self.exchange.watch_ohlcv(symbol, timeframe=timeframe, since=since, limit=limit, params=params)
 
     async def fetch_order(self, oid, symbol, params={}):

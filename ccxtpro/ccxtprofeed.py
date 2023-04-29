@@ -23,6 +23,7 @@ from __future__ import (absolute_import, division, print_function, unicode_liter
 
 import time
 import asyncio
+import threading
 from collections import deque
 from datetime import datetime
 
@@ -86,22 +87,17 @@ class CCXTProFeed(with_metaclass(MetaCCXTFeed, DataBase)):
         self._last_id = ''  # last processed trade id for ohlcv
         self._last_ts = 0  # last processed timestamp for ohlcv
 
-    def start(self, ):
-        DataBase.start(self)
+    async def start(self, ):
+        await DataBase.start(self)
 
         if self.p.fromdate:
             self._state = self._ST_HISTORBACK
             self.put_notification(self.DELAYED)
-            self.sync_fetch_ohlcv(self.p.fromdate)
+            await self._fetch_ohlcv(self.p.fromdate)
 
         else:
             self._state = self._ST_LIVE
             self.put_notification(self.LIVE)
-
-    def sync_fetch_ohlcv(self, fromdate=None):
-        loop = asyncio.get_event_loop()
-        task = asyncio.ensure_future(self._fetch_ohlcv(fromdate))
-        loop.run_until_complete(asyncio.wait([task]))
 
     async def _load(self):
         if self._state == self._ST_OVER:
@@ -157,7 +153,18 @@ class CCXTProFeed(with_metaclass(MetaCCXTFeed, DataBase)):
                 print('---- NEW REQUEST ----')
                 print('{} - Requesting: Since TS {} Since date {} granularity {}, limit {}, params'.format(datetime.utcnow(), since, since_dt, granularity,
                                                                                                            limit, self.p.fetch_ohlcv_params))
-                data = sorted(await self.store.fetch_ohlcv(self.p.dataname, timeframe=granularity, since=since, limit=limit, params=self.p.fetch_ohlcv_params))
+                if since:
+                    data = sorted(await self.store.fetch_ohlcv(self.p.dataname,
+                                                               timeframe=granularity,
+                                                               since=since,
+                                                               limit=limit,
+                                                               params=self.p.fetch_ohlcv_params))
+                else:
+                    data = sorted(await self.store.watch_ohlcv(self.p.dataname,
+                                                               timeframe=granularity,
+                                                               since=since,
+                                                               limit=limit,
+                                                               params=self.p.fetch_ohlcv_params))
                 try:
                     for i, ohlcv in enumerate(data):
                         tstamp, open_, high, low, close, volume = ohlcv
@@ -168,8 +175,18 @@ class CCXTProFeed(with_metaclass(MetaCCXTFeed, DataBase)):
                     print('Index Error: Data = {}'.format(data))
                 print('---- REQUEST END ----')
             else:
-
-                data = sorted(await self.store.fetch_ohlcv(self.p.dataname, timeframe=granularity, since=since, limit=limit, params=self.p.fetch_ohlcv_params))
+                if since:
+                    data = sorted(await self.store.fetch_ohlcv(self.p.dataname,
+                                                               timeframe=granularity,
+                                                               since=since,
+                                                               limit=limit,
+                                                               params=self.p.fetch_ohlcv_params))
+                else:
+                    data = sorted(await self.store.watch_ohlcv(self.p.dataname,
+                                                               timeframe=granularity,
+                                                               since=since,
+                                                               limit=limit,
+                                                               params=self.p.fetch_ohlcv_params))
 
             # Check to see if dropping the latest candle will help with
             # exchanges which return partial data
