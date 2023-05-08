@@ -94,7 +94,6 @@ class CCXTProFeed(with_metaclass(MetaCCXTFeed, DataBase)):
             self._state = self._ST_HISTORBACK
             self.put_notification(self.DELAYED)
             await self._fetch_ohlcv(self.p.fromdate)
-
         else:
             self._state = self._ST_LIVE
             self.put_notification(self.LIVE)

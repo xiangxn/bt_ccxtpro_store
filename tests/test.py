@@ -12,10 +12,11 @@ def main():
 
     class TestStrategy(bt.Strategy):
 
-        params = (("production", True), )
+        params = (("period_boll", 275), ("price_diff", 20), ('small_cotter', 10), ("production", False), ("debug", True), ('reversal', False))
 
         def __init__(self):
             self.next_runs = 0
+            self.boll = bt.indicators.bollinger.BollingerBands(self.datas[0], period=self.p.period_boll)
 
         def debug(self, txt, dt=None):
             dt = dt or self.datas[0].datetime.datetime(0)
@@ -60,7 +61,7 @@ def main():
         fromdate=hist_start_date,
         compression=5,
         ohlcv_limit=99999,
-        # drop_newest=True,
+        drop_newest=True,
         # historical=True
     )
 
