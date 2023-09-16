@@ -243,14 +243,27 @@ class CCXTProBroker(with_metaclass(MetaCCXTProBroker, BrokerBase)):
                 self.use_order_params = False
                 return None
 
-        _order = await self.store.fetch_order(ret_ord['id'], data.p.dataname)
+        if ret_ord['status'] == "closed":
+            order = CCXTOrder(owner, data, ret_ord)
+            order.price = ret_ord['price']
+            order.execute(data.datetime[0], ret_ord['amount'], ret_ord['price'], 0, 0.0, 0.0, 0, 0.0, 0.0, 0.0, 0.0, 0, 0.0)
+            order.completed()
+            self.notify(order)
+            return order
+        elif ret_ord['status'] == "rejected":
+            order = CCXTOrder(owner, data, ret_ord)
+            order.reject()
+            self.notify(order)
+            return order
+        else:
+            _order = await self.store.fetch_order(ret_ord['id'], data.p.dataname)
 
-        order = CCXTOrder(owner, data, _order)
-        order.price = ret_ord['price']
-        self.open_orders.append(order)
+            order = CCXTOrder(owner, data, _order)
+            order.price = ret_ord['price']
+            self.open_orders.append(order)
 
-        self.notify(order)
-        return order
+            self.notify(order)
+            return order
 
     async def buy(self,
                   owner,

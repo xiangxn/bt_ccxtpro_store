@@ -24,6 +24,7 @@ def main():
             print(f'[{dt}]: {txt}')
 
         def next(self, dt=None):
+            print("d2:", self.datas[1].volume[0])
             dt = dt or self.datas[0].datetime.datetime(0)
             print('%s closing price: %s' % (dt.isoformat(), self.datas[0].close[0]))
             self.next_runs += 1
@@ -39,24 +40,30 @@ def main():
                 self.live_data = False
 
         def prenext(self):
-            print("prenext.....")
-            if self.p.production and not self.live_data:
-                for data in self.datas:
-                    self.debug(' {} | O: {} H: {} L: {} C: {} V:{}'.format(data._name, data.open[0], data.high[0], data.low[0], data.close[0], data.volume[0]))
-            else:
-                data = self.datas[0]
-                self.debug(' {} | O: {} H: {} L: {} C: {} V:{}'.format(data._name, data.open[0], data.high[0], data.low[0], data.close[0], data.volume[0]))
+            # print("prenext.....")
+            # print("len:", len(self.datas))
+            # print("prenext d1:", self.data0.volume[0], self.data0.close[0])
+            # print("prenext d2:", self.data1.volume[0], self.data1.close[0])
+            # if self.p.production and not self.live_data:
+            #     for data in self.datas:
+            #         self.debug(' {} | O: {} H: {} L: {} C: {} V:{}'.format(data._name, data.open[0], data.high[0], data.low[0], data.close[0], data.volume[0]))
+            # else:
+            #     for data in self.datas:
+            #         self.debug(' {} | O: {} H: {} L: {} C: {} V:{}'.format(data._name, data.open[0], data.high[0], data.low[0], data.close[0], data.volume[0]))
+            pass
 
     cerebro = bt.Cerebro()
 
-    cerebro.addstrategy(TestStrategy)
 
-    config = { 'enableRateLimit': True, 'requests_trust_env': True, 'aiohttp_trust_env': True, 'OHLCVLimit': 1500 }
+
+    config = { 'enableRateLimit': True, 'requests_trust_env': True, 'aiohttp_trust_env': True, 'OHLCVLimit': 1500, 'options': { 'defaultType': 'future'} }
+    config2 = { 'enableRateLimit': True, 'requests_trust_env': True, 'aiohttp_trust_env': True, 'OHLCVLimit': 1500, 'options': { 'defaultType': 'spot'} }
     store = CCXTProStore(exchange='binanceusdm', currency='USDT', config=config, retries=10, debug=True)
+
     hist_start_date = datetime.utcnow() - timedelta(minutes=1370)
     data = store.getdata(
         dataname='ETH/USDT',
-        name="ETHUSDT",
+        name="future",
         timeframe=bt.TimeFrame.Minutes,
         fromdate=hist_start_date,
         compression=5,
@@ -66,7 +73,22 @@ def main():
     )
 
     # Add the feed
-    cerebro.adddata(data)
+    cerebro.adddata(data, name="future")
+
+    s2 = CCXTProStore(exchange='binance', currency='USDT', config=config2, retries=10, debug=True)
+    d2 = s2.getdata(
+        dataname='ETH/USDT',
+        name="spot",
+        timeframe=bt.TimeFrame.Minutes,
+        fromdate=hist_start_date,
+        compression=5,
+        ohlcv_limit=99999,
+        drop_newest=True,
+        # historical=True
+    )
+    cerebro.adddata(d2, name="spot")
+
+    cerebro.addstrategy(TestStrategy)
 
     # Run the strategy
     task = asyncio.ensure_future(cerebro.run())
