@@ -249,6 +249,7 @@ class CCXTProBroker(with_metaclass(MetaCCXTProBroker, BrokerBase)):
             order.execute(data.datetime[0], ret_ord['amount'], ret_ord['price'], 0, 0.0, 0.0, 0, 0.0, 0.0, 0.0, 0.0, 0, 0.0)
             order.completed()
             self.notify(order)
+            self.get_balance(order.data)
             return order
         elif ret_ord['status'] == "rejected":
             order = CCXTOrder(owner, data, ret_ord)
