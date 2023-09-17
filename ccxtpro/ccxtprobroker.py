@@ -39,6 +39,7 @@ class CCXTOrder(OrderBase):
         self.executed_fills = []
         self.ordtype = self.Buy if ccxt_order['side'] == 'buy' else self.Sell
         self.size = float(ccxt_order['amount'])
+        self.price = float(ccxt_order['price'])
 
         super(CCXTOrder, self).__init__()
 
@@ -245,7 +246,8 @@ class CCXTProBroker(with_metaclass(MetaCCXTProBroker, BrokerBase)):
 
         if ret_ord['status'] == "closed":
             order = CCXTOrder(owner, data, ret_ord)
-            order.price = ret_ord['price']
+            pos = self.getposition(data, clone=False)
+            pos.update(order.size, order.price)
             order.execute(data.datetime[0], ret_ord['amount'], ret_ord['price'], 0, 0.0, 0.0, 0, 0.0, 0.0, 0.0, 0.0, 0, 0.0)
             order.completed()
             self.notify(order)
@@ -258,11 +260,8 @@ class CCXTProBroker(with_metaclass(MetaCCXTProBroker, BrokerBase)):
             return order
         else:
             _order = await self.store.fetch_order(ret_ord['id'], data.p.dataname)
-
             order = CCXTOrder(owner, data, _order)
-            order.price = ret_ord['price']
             self.open_orders.append(order)
-
             self.notify(order)
             return order
 
